@@ -57,22 +57,22 @@ int DecodeSmd(unsigned char *data,int len)
   return 0;
 }
 
-int PicoCartLoad(FAT_FILE *f,unsigned char **prom,unsigned int *psize)
+int PicoCartLoad(FILE *f,unsigned char **prom,unsigned int *psize)
 {
   unsigned char *rom=NULL; int size=0;
   if (f==NULL) return 1;
 
-  FAT_fseek(f,0,SEEK_END); size=FAT_ftell(f); FAT_fseek(f,0,SEEK_SET);
+  fseek(f,0,SEEK_END); size=ftell(f); fseek(f,0,SEEK_SET);
 
   size=(size+3)&~3; // Round up to a multiple of 4
 
   // Allocate space for the rom plus padding
   rom=(unsigned char *)malloc(size+4);
-  if (rom==NULL) { FAT_fclose(f); return 1; }
+  if (rom==NULL) { fclose(f); return 1; }
   //memset(rom,0,size+4); // notaz: what is that for?
 
-  FAT_fread(rom,1,size,f); // Load up the rom
-  FAT_fclose(f);
+  fread(rom,1,size,f); // Load up the rom
+  fclose(f);
 
   // Check for SMD:
   if ((size&0x3fff)==0x200) { DecodeSmd(rom,size); size-=0x200; } // Decode and byteswap SMD
@@ -88,7 +88,7 @@ int PicoCartLoad(FAT_FILE *f,unsigned char **prom,unsigned int *psize)
 int PicoCartInsert(unsigned char *rom,unsigned int romsize)
 {
   // Make sure movie playing/recording is stopped:
-  if (PmovFile) FAT_fclose(PmovFile);
+  if (PmovFile) fclose(PmovFile);
   PmovFile=NULL; PmovAction=0;
 
   // notaz: add a 68k "jump one op back" opcode to the end of ROM.

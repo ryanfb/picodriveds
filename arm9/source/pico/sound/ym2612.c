@@ -115,6 +115,8 @@
 #include "driver.h"
 #include "ym2612.h"
 
+#ifdef ARM9_SOUND
+
 // test
 //#ifdef ARM
 //#include "../../clibc/faststr.h"
@@ -1786,3 +1788,5 @@ void YM2612PicoStateLoad()
 
 	ym2612.addr_A1 = old_A1;
 }
+
+#endif // ARM9_SOUND

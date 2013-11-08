@@ -56,7 +56,9 @@ int PicoInit()
 
   // Init CPUs:
   SekInit();
+#ifdef ARM9_SOUND
   z80_init(); // init even if we aren't going to use it
+#endif
 
   // Setup memory callbacks:
   PicoMemInit();
@@ -71,7 +73,9 @@ int PicoInit()
 // to be called once on emu exit
 void PicoExit()
 {
+#ifdef ARM9_SOUND
   z80_exit();
+#endif
 
   // notaz: sram
   if(SRam.data) free(SRam.data); SRam.data=0;
@@ -90,7 +94,9 @@ int PicoReset(int hard)
   if (Pico.romsize<=0) return 1;
 
   SekReset();
+#ifdef ARM9_SOUND
   z80_reset();
+#endif
 
   // reset VDP state, VRAM and PicoMisc 
   memset(&Pico.video,0,sizeof(Pico.video));
@@ -136,7 +142,9 @@ int PicoReset(int hard)
   Pico.video.status &= ~1;
   Pico.video.status |= pal;
 
+#ifdef ARM9_SOUND
   sound_reset(PicoOpt);
+#endif
 
   // notaz: sram
   if(SRam.resize) {
@@ -207,8 +215,10 @@ static int PicoFrameHints()
 
   pv->status|=0x08; // Go into vblank
 
+#ifdef ARM9_SOUND
   if(PicoOpt&4)
     z80_resetCycles();
+#endif
 
   for (y=loop_from;y<224;y++)
   {
@@ -247,13 +257,16 @@ static int PicoFrameHints()
     {
       pv->status|=0x80; // V-Int happened
       if(pv->reg[1]&0x20) SekInterrupt(6);
+#ifdef ARM9_SOUND
 	  if(Pico.m.z80Run && (PicoOpt&4)) z80_int();
+#endif
     }
 
     Pico.m.scanline=(short)y;
 
     // Run scanline:
     total+=SekRun(aim-total);
+#ifdef ARM9_SOUND
     if((PicoOpt&4) && Pico.m.z80Run) {
       aim_z80+=cycles_z80;
       total_z80+=z80_run(aim_z80-total_z80);
@@ -261,6 +274,7 @@ static int PicoFrameHints()
 
 	if(PicoOpt&1)
       sound_timers_and_dac(y-loop_from);
+#endif
 
     // even if we are in PAL mode, we draw 224 lines only (although we sould do 240 in some cases)
     if(y>=0 && !PicoSkipFrame && !(PicoOpt&0x10)) PicoLine(y);
@@ -304,8 +318,10 @@ static int PicoFrameSimple()
 
   Pico.m.scanline=-100;
 
+#ifdef ARM9_SOUND
   if(PicoOpt&4)
     z80_resetCycles();
+#endif
 
   // V-Blanking period:
   if (Pico.video.reg[1]&0x20) SekInterrupt(6); // Set IRQ
@@ -316,6 +332,7 @@ static int PicoFrameSimple()
   // BeginProfile();
   total=SekRun(cycles_68k_vblank);
   
+#ifdef ARM9_SOUND
   if((PicoOpt&4) && Pico.m.z80Run) {
     z80_int();
 	if(PicoOpt&1) {
@@ -330,6 +347,7 @@ static int PicoFrameSimple()
         total_z80=z80_run(aim_z80);
 	}
   }
+#endif
 
   // 6 button pad: let's just say it timed out now
   Pico.m.padTHPhase[0]=Pico.m.padTHPhase[1]=0;
@@ -346,19 +364,24 @@ static int PicoFrameSimple()
     total+=SekRun(aim-total);
 	if((PicoOpt&4) && Pico.m.z80Run) {
 	  if(PicoOpt&1) {
+#ifdef ARM9_SOUND
 	    z80lines += 14; // 14 lines per section
 	    for(; z80line < z80lines; z80line++) {
 	      aim_z80+=cycles_z80_line;
           total_z80+=z80_run(aim_z80-total_z80);
 	      sound_timers_and_dac(z80line);
 	    }
+#endif
       } else {
         aim_z80+=cycles_z80_block;
+#ifdef ARM9_SOUND
         total_z80+=z80_run(aim_z80-total_z80);
+#endif
       }
 	}
   }
 
+#ifdef ARM9_SOUND
   // todo: detect z80 idle too?
   if(sects && (PicoOpt&5) == 5 && Pico.m.z80Run) {
     z80lines += 14*sects;
@@ -368,6 +391,7 @@ static int PicoFrameSimple()
       sound_timers_and_dac(z80line);
     }
   }
+#endif
 
   // Dave was running 17 sections, but it looks like there should be only 16
   // it is probably some sort of overhead of this method,
@@ -375,10 +399,12 @@ static int PicoFrameSimple()
   if(!sects) {
     aim+=cycles_68k_block;
 	total+=SekRun(aim-total);
+#ifdef ARM9_SOUND
     if((PicoOpt&4) && Pico.m.z80Run) {
       aim_z80+=cycles_z80_block;
       total_z80+=z80_run(aim_z80-total_z80);
     }
+#endif
   }
   // EndProfile("Emulation");
 
@@ -409,13 +435,17 @@ int PicoFrame()
   //if(Pico.video.reg[12]&0x2) Pico.video.status ^= 0x10; // change odd bit in interlace mode
 
   // clear sound buffer
+#ifdef ARM9_SOUND
   if(PsndOut) memset(PsndOut, 0, (PicoOpt & 8) ? (PsndLen<<2) : (PsndLen<<1));
+#endif
 
   if(hints)
        PicoFrameHints();
   else PicoFrameSimple();
 
+#ifdef ARM9_SOUND
   if(PsndOut) sound_render();
+#endif
 
   return 0;
 }

@@ -9,7 +9,9 @@
 
 // For commercial use, separate licencing terms must be obtained.
 
-#include "fat/gba_nds_fat.h"
+#include <stdio.h>
+#include <nds/jtypes.h>
+// #include "fat/gba_nds_fat.h"
 #include "config.h"
 
 #ifdef __cplusplus
@@ -42,7 +44,7 @@ int PmovState();
 int PmovUpdate();
 
 // Cart.c
-int PicoCartLoad(FAT_FILE *f,unsigned char **prom,unsigned int *psize);
+int PicoCartLoad(FILE *f,unsigned char **prom,unsigned int *psize);
 int PicoCartInsert(unsigned char *rom,unsigned int romsize);
 // notaz
 int CartLoadZip(const char *fname, unsigned char **prom, unsigned int *psize);

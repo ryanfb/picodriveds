@@ -1,3 +1,3 @@
-FAT_FILE* loadFile();
+FILE* loadFile();
 
 extern char fileName[256];

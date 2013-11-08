@@ -15,7 +15,7 @@ include $(DEVKITARM)/ds_rules
 # all directories are relative to this makefile
 #---------------------------------------------------------------------------------
 BUILD		:=	build
-SOURCES		:=	source source/fat source/cyclone source/pico/sound source/pico
+SOURCES		:=	source source/cyclone source/pico/sound source/pico
 INCLUDES	:=	include source
 DATA		:=
 
@@ -26,7 +26,7 @@ DATA		:=
 
 # note: arm9tdmi isn't the correct CPU arch, but anything newer and LD
 # *insists* it has a FPU or VFP, and it won't take no for an answer!
-CFLAGS	:=	-Wall -O2\
+CFLAGS	:=	-Wall -O3\
  			-mcpu=arm9tdmi -mtune=arm9tdmi -fomit-frame-pointer\
 			-ffast-math \
 			$(ARCH)
@@ -40,7 +40,7 @@ LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -mno-fpu -Wl,-Map,$(notdir $*.map)
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:= -lnds9 -lm
+LIBS	:= -lfat -lnds9 -lm
  
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

@@ -14,14 +14,15 @@
 extern void *ym2612_regs;
 
 // sn76496
+#ifdef ARM9_SOUND
 extern int *sn76496_regs;
-
+#endif
 
 int (*PicoAcb)(struct PicoArea *)=NULL; // Area callback for each block of memory
 void *PmovFile=NULL;
 int PmovAction=0;
-arearw *areaRead  = (arearw *) FAT_fread;  // read and write function pointers for
-arearw *areaWrite = (arearw *) FAT_fwrite; // gzip save state ability
+arearw *areaRead  = (arearw *) fread;  // read and write function pointers for
+arearw *areaWrite = (arearw *) fwrite; // gzip save state ability
 
 
 // Scan one variable and callback
@@ -124,6 +125,7 @@ static int PicoAreaScan(int action,unsigned int ver)
 	//SCAN_VAR(Pico.s    ,"sound")
 	// notaz: save/load z80, YM2612, sn76496 states instead of Pico.s (which is unused anyway)
 	if(PicoOpt&7) {
+#ifdef ARM9_SOUND
 	  if((PmovAction&3)==1) z80_pack(cpu_z80);
       ret = SCAN_VAR(cpu_z80,"cpu_z80")
 	  // do not unpack if we fail to load z80 state
@@ -131,12 +133,17 @@ static int PicoAreaScan(int action,unsigned int ver)
         if(ret) z80_reset();
         else    z80_unpack(cpu_z80);
       }
+#endif
 	}
 	if(PicoOpt&3)
+#ifdef ARM9_SOUND
       ScanVar(sn76496_regs,28*4,"SN76496state"); // regs and other stuff
+#endif
 	if(PicoOpt&1) {
+#ifdef ARM9_SOUND
       ScanVar(ym2612_regs, 0x200+4, "YM2612state"); // regs + addr line
 	  if((PmovAction&3)==2) YM2612PicoStateLoad(); // reload YM2612 state from it's regs
+#endif
 	}
   }
 
@@ -198,7 +205,7 @@ int PmovUpdate()
   if (ret!=2)
   {
     // End of file
-    FAT_fclose((FAT_FILE *) PmovFile); PmovFile=NULL;
+    fclose((FILE *) PmovFile); PmovFile=NULL;
     PmovAction=0;
   }
 

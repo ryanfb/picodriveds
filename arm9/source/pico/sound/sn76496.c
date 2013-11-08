@@ -19,6 +19,7 @@
 #include "driver.h"
 #include "sn76496.h"
 
+#ifdef ARM9_SOUND
 
 #define MAX_OUTPUT 0x47ff // was 0x7fff
 
@@ -342,3 +343,4 @@ int SN76496_init(int clock,int sample_rate)
 	return 0;
 }
 
+#endif // ARM9_SOUND

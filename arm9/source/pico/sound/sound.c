@@ -21,6 +21,7 @@
 
 #include "../PicoInt.h"
 
+#ifdef ARM9_SOUND
 
 int rasters_total; // total num of rasters per frame
 
@@ -377,3 +378,4 @@ void z80_exit()
 #endif
 }
 
+#endif // ARM9_SOUND

@@ -162,7 +162,14 @@ static u32 OtherRead16(u32 a)
     goto end;
   }
 
-  if ((a&0xfffffc)==0xa04000) { if(PicoOpt&1) d=YM2612Read(a); else d=Pico.m.rotate++&3; goto end; } // Fudge if disabled
+  if ((a&0xfffffc)==0xa04000) { 
+#ifdef ARM9_SOUND
+	  if(PicoOpt&1) 
+		  d=YM2612Read(a); 
+	  else 
+#endif
+		  d=Pico.m.rotate++&3; 
+	  goto end; } // Fudge if disabled
   if ((a&0xffffe0)==0xa10000) { // I/O ports
     a=(a>>1)&0xf;
     switch(a) {
@@ -184,11 +191,19 @@ end:
 
 static void OtherWrite8(u32 a,u32 d)
 {
-  if (a==0xc00011||a==0xa07F11){ if(PicoOpt&2) SN76496Write(d); return; } // PSG Sound
+  if (a==0xc00011||a==0xa07F11){ 
+#ifdef ARM9_SOUND
+	  if(PicoOpt&2) SN76496Write(d); 
+#endif
+	  return; } // PSG Sound
   if ((a&0xffffe0)==0xc00000)  { PicoVideoWrite(a,d|(d<<8)); return; } // Byte access gets mirrored
 
   if ((a&0xffc000)==0xa00000)  { Pico.zram[a&0x1fff]=(u8)d; return; } // Z80 ram
-  if ((a&0xfffffc)==0xa04000)  { if(PicoOpt&1) YM2612Write(a, d); return; } // FM Sound
+  if ((a&0xfffffc)==0xa04000)  { 
+#ifdef ARM9_SOUND
+	  if(PicoOpt&1) YM2612Write(a, d); 
+#endif
+	  return; } // FM Sound
   if ((a&0xffffe0)==0xa10000)  { // I/O ports
     a=(a>>1)&0xf;
 	// 6 button gamepad: if TH went from 0 to 1, gamepad changes state
@@ -206,7 +221,13 @@ static void OtherWrite8(u32 a,u32 d)
     return;
   }
   if (a==0xa11100) { Pico.m.z80Run=(u8)(d^1); return; }
-  if (a==0xa11200) { if(!d) z80_reset(); return; }
+  if (a==0xa11200) { 
+#ifdef ARM9_SOUND
+	  if(!d) 
+		  z80_reset(); 
+#endif
+	  return; 
+  }
 
   if (a==0xa06000) // BANK register
   {
@@ -446,7 +467,9 @@ unsigned char z80_read(unsigned short a)
 
   if ((a>>13)==2) // 0x4000-0x5fff (Charles MacDonald)
   {
+#ifdef ARM9_SOUND
     if(PicoOpt&1) ret = (u8) YM2612Read(a&3);
+#endif
 	goto end;
   }
 
@@ -478,13 +501,17 @@ void z80_write(unsigned char data, unsigned short a)
 {
   if ((a>>13)==2) // 0x4000-0x5fff (Charles MacDonald)
   {
+#ifdef ARM9_SOUND
     if(PicoOpt&1) YM2612Write(a, data);
+#endif
     return;
   }
 
   if ((a&0xfff8)==0x7f10&&(a&1)) // 7f11 7f13 7f15 7f17
   {
+#ifdef ARM9_SOUND
     if(PicoOpt&2) SN76496Write(data);
+#endif
     return;
   }
 

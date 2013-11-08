@@ -5,6 +5,7 @@
 #ifndef _H_FM_FM_
 #define _H_FM_FM_
 
+#include "../../config.h"
 
 void YM2612Init(int baseclock, int rate);
 void YM2612ResetChip();

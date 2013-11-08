@@ -6,8 +6,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-#include "fat/gba_nds_fat.h"
+#include <sys/stat.h>
+#include <sys/dir.h>
+
+// #include "fat/gba_nds_fat.h"
 
 char fileName[256];
 int numFiles = 0;
@@ -27,6 +31,8 @@ struct fileEntry *fileList = NULL;
 struct fileEntry *fileLast = NULL;
 
 char mapName[256] = "";
+
+typedef enum {FT_NONE,FT_FILE,FT_DIR} FILE_TYPE;
 
 //---------------------------------------------------------------------------------
 void addFile(int type, char* fileName) {
@@ -113,21 +119,27 @@ void showFileList() {
 	
 }
 
+DIR_ITER* dir;
 
-		
 //---------------------------------------------------------------------------------
 void getFileList() {
 //---------------------------------------------------------------------------------
 	iprintf("\x1b[6;0H\x1b[0J");
 	freeFileList();
-	int type = FAT_FindFirstFile(fileName);
-	FAT_GetLongFilename(fileName);
-	addFile( type, fileName );
-
-	while ( (type = FAT_FindNextFile(fileName)) ) {
-		FAT_GetLongFilename(fileName);
+	
+	int type;
+	struct stat st;
+	
+	while ( dirnext(dir, fileName, &st) == 0 ) {
+		if(st.st_mode & S_IFDIR)
+			type = FT_DIR;
+		else
+			type = FT_FILE;
+		
 		addFile( type, fileName );
 	}
+	
+	dirclose(dir);
 }
 
 char *cursorPos = "\x1b[0;0H  ";
@@ -184,9 +196,10 @@ void updateCursor() {
 
 }
 
-FAT_FILE* loadFile() {
-  int keysPressed, keysReleased;
+FILE* loadFile() {
+  int keysPressed, keysReleased, keysDownNonRepeat;
   iprintf("\x1b[4;10HLoad File");
+  dir = diropen(".");
   getFileList();
   showFileList();
   // iprintf("numFiles: %d\n",numFiles);	
@@ -199,12 +212,13 @@ FAT_FILE* loadFile() {
 		swiWaitForVBlank();
 		scanKeys();
 		
-		// keysPressed = ~(REG_KEYINPUT);
+		keysDownNonRepeat = keysDown();
 		keysPressed = keysDownRepeat();
 		keysReleased = keysUp();
 		
 		if ( keysPressed & KEY_B ) {
-			FAT_chdir("..");
+			chdir("..");
+			dir = diropen(".");
 			getFileList();
 			showFileList();
 			cursorLine=6;
@@ -223,7 +237,8 @@ FAT_FILE* loadFile() {
 			}
 			
 			if ( file->type == FT_DIR ) {
-				FAT_chdir(file->name);
+				chdir(file->name);
+				dir = diropen(".");
 				getFileList();
 				showFileList();
 				cursorLine=6;
@@ -233,7 +248,7 @@ FAT_FILE* loadFile() {
 				iprintf("\x1b[6;0H\x1b[0J");
 				
 				iprintf("Loading %s ... ",file->name);
-				FAT_FILE* handle = FAT_fopen(file->name,"rb");
+				FILE* handle = fopen(file->name,"rb");
 				strcpy(fileName,file->name);
 				freeFileList();
 				return handle;
@@ -244,7 +259,7 @@ FAT_FILE* loadFile() {
 
 		} 
 
-		if ( keysPressed & KEY_SELECT) {
+		if ( keysDownNonRepeat & KEY_SELECT) {
 			if(choosingfile == 2) {
 				return NULL;
 			}
