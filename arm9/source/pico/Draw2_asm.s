@@ -1,3 +1,5 @@
+#ifdef SW_FRAME_RENDERER
+
 @ assembly optimized versions of most funtions from draw2.c
 @ this is highly specialized, be careful if changing related C code!
 
@@ -915,4 +917,4 @@ DrawSpriteFull:
 
 .pool
 
-
+#endif

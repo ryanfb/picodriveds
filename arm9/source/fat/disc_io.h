@@ -21,7 +21,8 @@
 #define SUPPORT_SCSD		// comment out this line to remove Supercard SD support
 //#define SUPPORT_EFA2		// comment out this line to remove EFA2 linker support
 #define SUPPORT_FCSR		// comment out this line to remove GBA Flash Cart support
-//#define SUPPORT_EZSD		// comment out this line to remove EZ4 SD support
+#define SUPPORT_EZSD		// comment out this line to remove EZ4 SD support
+#define SUPPORT_MMCF		// comment out this line to remove Max Media Dock support
 
 // Disk caching options, added by www.neoflash.com
 // Each additional sector cache uses 512 bytes of memory

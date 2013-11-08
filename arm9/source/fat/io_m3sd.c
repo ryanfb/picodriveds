@@ -200,10 +200,12 @@ bool M3SD_write1sector(u32 sectorn,u32 p)
 #define M3_DATA			(vu16*)(0x08800000)		// Pointer to buffer of CF data transered from card
 
 // CF Card status
+#define CF_STS_INSERTED0		0xFF
 #define CF_STS_INSERTED1		0x20
 #define CF_STS_INSERTED2		0x30
 #define CF_STS_INSERTED3		0x22
 #define CF_STS_INSERTED4		0x32
+#define isM3ins(sta) ((sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)||(sta == CF_STS_INSERTED3)||(sta == CF_STS_INSERTED4))
 
 /*-----------------------------------------------------------------
 M3SD_IsInserted
@@ -212,23 +214,13 @@ bool return OUT:  true if a CF card is inserted
 -----------------------------------------------------------------*/
 bool M3SD_IsInserted (void) 
 {
-	int i;
 	u16 sta;
 	// Change register, then check if value did change
-	M3_REG_STS = CF_STS_INSERTED1;
-
-	for(i=0;i<CARD_TIMEOUT;i++)
-	{
-		sta=M3_REG_STS;
-		if((sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)||(sta == CF_STS_INSERTED3)||(sta == CF_STS_INSERTED4))
-		{
-			return true;
-			//break;
-		}
-	}
-	return false;
-
-//	return ( (sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2) );
+	M3_REG_STS = CF_STS_INSERTED0;
+	sta=M3_REG_STS;
+//	return (M3_REG_STS == CF_STS_INSERTED);
+//	return ( (sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)||(sta == CF_STS_INSERTED3)||(sta == CF_STS_INSERTED4) );
+	return  isM3ins(sta);
 //	return true;
 }
 
@@ -246,11 +238,12 @@ bool M3SD_ClearStatus (void)
 	u16 sta;
 
 	i = 0;
-	M3_REG_STS = CF_STS_INSERTED1;
+	M3_REG_STS = CF_STS_INSERTED0;
 	while (i < CARD_TIMEOUT)
 	{
 		sta=M3_REG_STS;
-		if(  (sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)  )break;
+//		if(  (sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)||(sta == CF_STS_INSERTED3)||(sta == CF_STS_INSERTED4)  )break;
+		if(   isM3ins(sta)  )break;
 		i++;
 	}
 	if (i >= CARD_TIMEOUT)
@@ -344,7 +337,9 @@ bool M3SD_Unlock(void)
 	vu16 sta;
 	sta=M3_REG_STS;
 	sta=M3_REG_STS;
-	if(  (sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)  )return true;
+//	if(  (sta == CF_STS_INSERTED1)||(sta == CF_STS_INSERTED2)  )return true;
+	if(  isM3ins(sta)  )return true;
+
 
 	return false;
 }

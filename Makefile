@@ -7,7 +7,7 @@ endif
 
 include $(DEVKITARM)/ds_rules
 
-export TARGET		:=	$(shell basename $(CURDIR))
+export TARGET		:=	picodriveds
 export TOPDIR		:=	$(CURDIR)
 
 
@@ -21,7 +21,7 @@ export PATH		:=	$(DEVKITARM)/bin:$(PATH)
 #---------------------------------------------------------------------------------
 # version number
 #---------------------------------------------------------------------------------
-export VERSION		:= 0.1.5
+export VERSION		:= 0.1.6
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------

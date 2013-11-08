@@ -1,4 +1,4 @@
-#ifdef NDS_FRAME_RENDERER
+#ifdef HW_FRAME_RENDERER
 
 #include <nds.h>
 #include <nds/arm9/console.h>
@@ -334,4 +334,4 @@ void PicoFrameFull()
 	iprintf("Map offset:\t%d     ",mapoffset);
 }
 
-#endif // NDS_FRAME_RENDERER
+#endif // HW_FRAME_RENDERER

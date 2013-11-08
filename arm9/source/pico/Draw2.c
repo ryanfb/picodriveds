@@ -8,9 +8,13 @@
 
 // this is a frame-based renderer, alternative to Dave's line based which is in Draw.c
 
-#ifndef NDS_FRAME_RENDERER
-
 #include "PicoInt.h"
+
+unsigned short *PicoCramHigh=Pico.cram; // pointer to CRAM buff (0x40 shorts), converted to native device color (works only with 16bit for now)
+void (*PicoPrepareCram)()=0;            // prepares PicoCramHigh for renderer to use
+
+#ifdef SW_FRAME_RENDERER
+
 #include <assert.h>
 //#include <nds/jtypes.h>
 #ifndef __GNUC__
@@ -28,18 +32,13 @@
 
 #define USE_CACHE
 
-
 extern unsigned short *framebuff; // in format (8+320)x(8+224+8) (eights for borders)
-#ifndef NDS_FRAME_RENDERER
+#ifdef SW_FRAME_RENDERER
 int currpri = 0;
 #endif
 
 static int HighCacheA[41*(TILE_ROWS+1)+1+1]; // caches for high layers
 static int HighCacheB[41*(TILE_ROWS+1)+1+1];
-
-unsigned short *PicoCramHigh=Pico.cram; // pointer to CRAM buff (0x40 shorts), converted to native device color (works only with 16bit for now)
-void (*PicoPrepareCram)()=0;            // prepares PicoCramHigh for renderer to use
-
 
 // stuff available in asm:
 #ifdef _ASM_DRAW2_C
@@ -603,4 +602,4 @@ void PicoFrameFull()
 	if (Pico.video.reg[1]&0x40) DrawDisplayFull();
 }
 
-#endif // NDS_FRAME_RENDERER
+#endif // SW_FRAME_RENDERER

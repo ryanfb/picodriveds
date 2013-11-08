@@ -44,6 +44,10 @@
  #include "io_ezsd.h"
 #endif
 
+#ifdef SUPPORT_MMCF
+ #include "io_mmcf.h"
+#endif
+
 #ifdef SUPPORT_M3CF
  #include "io_m3cf.h"
 #endif
@@ -225,6 +229,16 @@ bool disc_setGbaSlotInterface (void)
  #ifdef ARM7
 	WAIT_CR |= (0x8080);
  #endif
+#endif
+
+#ifdef SUPPORT_MMCF
+	// check if we have an MMCF (Max Media Dock) plugged in
+	active_interface = MMCF_GetInterface() ;
+	if (active_interface->fn_StartUp())
+	{
+		// set MMCF as default IO
+		return true ;
+	} ;
 #endif
 
 #ifdef SUPPORT_M3CF

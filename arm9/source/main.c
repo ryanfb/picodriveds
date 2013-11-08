@@ -18,18 +18,18 @@
 
 #include "m3sd.h"
 
+#ifdef USE_ZLIB
+#include "zlib.h"
+#endif
+
 #include "fat/gba_nds_fat.h"
+#include "fat/disc_io.h"
 
 #ifdef ARM9_SOUND
 TransferSoundData picosound;
 #endif
 
 #define SC_UNLOCK ((vuint16*)0x09fffffe)
-#define SC_SD_COMMAND ((vuint16*)0x9800000)
-// SCSD Insertion Check Functions
-// extern void InitSCMode(void);
-// extern bool MemoryCard_IsInserted(void);
-bool scsd_is_inserted;
 
 unsigned short *framebuff = 0;
 
@@ -37,10 +37,17 @@ unsigned short *framebuff = 0;
 unsigned short realbuff[(8+320)*(8+224+8)];
 #endif
 
+#ifdef USE_EXTRA_RAM
+extern LPIO_INTERFACE active_interface;
+#endif
+
 static unsigned char *RomData=NULL;
 static unsigned int RomSize=0;
 
 static bool UsingAppendedRom = false;
+// separate from UsingAppendedRom, we need to track if we're using
+// GBAROM as writable memory
+static bool UsingGBAROM = false;
 
 FAT_FILE *romfile;
 
@@ -68,7 +75,8 @@ void UpdatePalette()
 }
 #endif
 
-void bgupdate() {
+void bgupdate()
+{
 	s16 c = COS[0] >> 4;
 	BG3_XDX = ( c * (xdxval))>>8;
 	BG3_YDY = ( c * (ydyval))>>8;
@@ -76,7 +84,8 @@ void bgupdate() {
 	iprintf("ydyval: %d    ",ydyval);
 }
 
-void PrintRegion() {
+void PrintRegion()
+{
 	iprintf("\n");
 	switch(Pico.m.hardware)
 	{
@@ -99,7 +108,8 @@ void PrintRegion() {
 }
 
 #ifdef ARM9_SOUND
-void InitSound() {
+void InitSound()
+{
 	if(PsndOut)
 		free(PsndOut);
 
@@ -122,6 +132,193 @@ void InitSound() {
 	*/
 }
 #endif
+
+#ifdef USE_ZLIB
+#define CHUNK 512
+
+int compressSaveState(void)
+{
+	FAT_FILE *source = FAT_fopen("testsave.nc", "rb");
+	FAT_FILE *dest = FAT_fopen("testsave.z", "wb");
+	int ret, flush;
+	int totalbytes = 0;
+	int maxchunk;
+	unsigned have;
+	z_stream strm;
+	// char in[CHUNK];
+	// char out[CHUNK];
+	char *in = malloc(CHUNK*sizeof(char));
+	char *out = malloc(CHUNK*sizeof(char));
+
+	struct Cyclone *cpustate = &PicoCpu;
+	struct Pico *emustate = &Pico;
+
+	// original routine
+	/*
+	PmovFile = FAT_fopen(saveFname, "wb");
+	res = FAT_fwrite(cpustate,1,sizeof(struct Cyclone),(FAT_FILE *) PmovFile);
+	res = (res != sizeof(PicoCpu) ? -1 : 0);
+	res = FAT_fwrite(emustate,1,sizeof(struct Pico),(FAT_FILE *) PmovFile);
+	res = (res != sizeof(Pico) ? -1 : 0);
+	FAT_fclose((FAT_FILE *) PmovFile);
+	*/
+	
+	// compressed routine
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+	ret = deflateInit(&strm, Z_BEST_COMPRESSION);
+	if(ret != Z_OK) {
+		return ret;
+	}
+
+// original code for compressing state without using an intermediate file
+#ifdef NOT_USED
+	// compress all of the save state
+	do {
+		if((totalbytes + CHUNK) <= sizeof(struct Cyclone)) {
+			maxchunk = CHUNK;
+		}
+		else {
+			maxchunk = sizeof(struct Cyclone)-totalbytes;
+		}
+		totalbytes += maxchunk;
+		memcpy(in,cpustate, maxchunk);
+		strm.avail_in = maxchunk;
+		strm.next_in = (unsigned char *) in;
+		do {
+			strm.avail_out = CHUNK;
+			strm.next_out = (unsigned char *) out;
+			ret = deflate(&strm, Z_NO_FLUSH);    /* no bad return value */
+			have = CHUNK - strm.avail_out;
+			if(FAT_fwrite(out, 1, have, dest) != have) {
+				(void)deflateEnd(&strm);
+				return Z_ERRNO;
+			}
+		} while (strm.avail_out == 0);
+	} while (totalbytes < sizeof(struct Cyclone));
+
+	totalbytes = 0;
+
+	do {
+		if((totalbytes + CHUNK) <= sizeof(struct Pico)) {
+			maxchunk = CHUNK;
+			flush = Z_NO_FLUSH;
+		}
+		else {
+			maxchunk = sizeof(struct Pico)-totalbytes;
+			flush = Z_FINISH;
+		}
+		totalbytes += maxchunk;
+		memcpy(in, emustate, maxchunk);
+		strm.avail_in = maxchunk;
+		strm.next_in = (unsigned char *) in;
+		do {
+			strm.avail_out = CHUNK;
+			strm.next_out = (unsigned char *) out;
+			ret = deflate(&strm, flush);    /* no bad return value */
+			have = CHUNK - strm.avail_out;
+			if (FAT_fwrite(out, 1, have, dest) != have) {
+				(void)deflateEnd(&strm);
+				return Z_ERRNO;
+			}
+		} while (strm.avail_out == 0);
+	} while (totalbytes < sizeof(struct Pico));
+#endif
+
+	/* compress until end of file */
+    do {
+        strm.avail_in = FAT_fread(in, 1, CHUNK, source);
+
+		flush = FAT_feof(source) ? Z_FINISH : Z_NO_FLUSH;
+        strm.next_in = (unsigned char *) in;
+
+        /* run deflate() on input until output buffer not full, finish
+           compression if all of source has been read in */
+        do {
+            strm.avail_out = CHUNK;
+            strm.next_out = (unsigned char *) out;
+            ret = deflate(&strm, flush);    /* no bad return value */
+            have = CHUNK - strm.avail_out;
+            if (FAT_fwrite(out, 1, have, dest) != have) {
+                (void)deflateEnd(&strm);
+                return Z_ERRNO;
+            }
+        } while (strm.avail_out == 0);
+
+        /* done when last data in file processed */
+    } while (flush != Z_FINISH);
+	(void)deflateEnd(&strm);
+	free(in);
+	free(out);
+	FAT_fclose(source);
+	FAT_fclose(dest);
+	return Z_OK;
+}
+
+int decompressSaveState(void)
+{
+	FAT_FILE *source = FAT_fopen("testsave.z", "rb");
+	FAT_FILE *dest = FAT_fopen("testsave.uz", "wb");
+	int ret;
+	unsigned have;
+	z_stream strm;
+	// char in[CHUNK];
+	// char out[CHUNK];
+	char *in = malloc(CHUNK*sizeof(char));
+	char *out = malloc(CHUNK*sizeof(char));
+
+	// compressed routine
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+	strm.avail_in = 0;
+	strm.next_in = Z_NULL;
+	ret = inflateInit(&strm);
+	if(ret != Z_OK) {
+		return ret;
+	}
+
+	/* decompress until deflate stream ends or end of file */
+	do {
+		strm.avail_in = FAT_fread(in, 1, CHUNK, source);
+		if (strm.avail_in == 0)
+			break;
+		strm.next_in = (unsigned char *) in;
+
+		/* run inflate() on input until output buffer not full */
+		do {
+			strm.avail_out = CHUNK;
+			strm.next_out = (unsigned char *) out;
+			ret = inflate(&strm, Z_NO_FLUSH);
+			switch (ret) {
+				case Z_NEED_DICT:
+					ret = Z_DATA_ERROR;     /* and fall through */
+				case Z_DATA_ERROR:
+				case Z_MEM_ERROR:
+					(void)inflateEnd(&strm);
+					return ret;
+			}
+			have = CHUNK - strm.avail_out;
+			if (FAT_fwrite(out, 1, have, dest) != have ) {
+				(void)inflateEnd(&strm);
+				return Z_ERRNO;
+            }
+		} while (strm.avail_out == 0);
+
+		/* done when inflate() says it's done */
+	} while (ret != Z_STREAM_END);
+
+	/* clean up and return */
+	(void)inflateEnd(&strm);
+	free(in);
+	free(out);
+	FAT_fclose(source);
+	FAT_fclose(dest);
+
+	return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+}
+#endif // USE_ZLIB
 
 int saveLoadGame(int load, int sram)
 {
@@ -204,7 +401,8 @@ int saveLoadGame(int load, int sram)
 
 int32 cx=32,cy=16;
 
-void ChangeScaleMode() {
+void ChangeScaleMode()
+{
 	s16 c = COS[0] >> 4;
 	scalemode = (scalemode + 1) % 3;
 	switch(scalemode) {
@@ -231,7 +429,8 @@ void ChangeScaleMode() {
 	}
 }
 
-void ChangeScreenPosition() {
+void ChangeScreenPosition()
+{
 	scanKeys();
 	uint32 keysPressed;
 	while(keysHeld() & KEY_R) {
@@ -270,7 +469,8 @@ void ChangeScreenPosition() {
 	}
 }
 
-void ConvertToGrayscale() {
+void ConvertToGrayscale()
+{
 	int i,j;
 	u8 b,g,r,max,min;
 	for(i = 0; i < 224; i++) {
@@ -560,11 +760,13 @@ void EmulateFrame()
 	return;
 }
 
-void processtimer() {
+void processtimer()
+{
 	// CurrentTimeInms+=10;
 }
 
-void processvblank() {
+void processvblank()
+{
 	if(!choosingfile) {
 		dsFrameCount++;
 		// FPS = pdFrameCount;
@@ -669,7 +871,9 @@ void InitInterruptHandler()
 }
 
 
-int FileChoose() {
+int FileChoose()
+{
+	consoleClear();
 	romfile=NULL;
 
 	romfile = loadFile();
@@ -693,8 +897,11 @@ int EmulateExit()
 
 		// Remove cartridge
 		PicoCartInsert(NULL,0);
-		if (RomData && !UsingAppendedRom) {
+		if (RomData && !UsingAppendedRom && !UsingGBAROM) {
 			free(RomData); RomData=NULL; RomSize=0;
+		}
+		else if(RomData && UsingGBAROM) {
+			RomData=NULL; RomSize=0;
 		}
 
 		PicoExit();
@@ -705,7 +912,8 @@ int EmulateExit()
 	}
 }
 
-int EmulateInit() {
+int EmulateInit()
+{
 	int i;
 	PicoInit();
 
@@ -721,7 +929,43 @@ int EmulateInit() {
 	}
 	else {	
 		if(romfile != NULL) {
-			PicoCartLoad(romfile,&RomData,&RomSize);
+			FAT_fseek(romfile,0,SEEK_END);
+			i = FAT_ftell(romfile);
+			// iprintf("FAT_ftell: %i\n",i);
+#ifdef USE_EXTRA_RAM
+			if((active_interface->ul_ioType == 0x44534353) && (i >= 3200000)) { // card is SCSD and ROM is large
+				iprintf("Using GBA ROM Space\n");
+
+				UsingGBAROM = true;
+				
+				// Unlock SDRAM
+				*SC_UNLOCK = 0xa55a;
+				*SC_UNLOCK = 0xa55a;
+				*SC_UNLOCK = 0x0007;
+				*SC_UNLOCK = 0x0007;
+
+				i=(i+3)&~3; // Round up to a multiple of 4
+				
+				FAT_fseek(romfile,0,SEEK_SET);
+				FAT_fread(GBAROM,1,i,romfile);
+				FAT_fclose(romfile);
+				
+				// Check for SMD:
+				if ((i&0x3fff)==0x200) {
+					DecodeSmd((unsigned char *)GBAROM,i); i-=0x200;
+				} // Decode and byteswap SMD
+				else Byteswap((unsigned char *)GBAROM,i); // Just byteswap
+			
+				RomData = (unsigned char *)GBAROM;
+				RomSize = i;
+			}
+			else {
+#endif
+				UsingGBAROM = false;
+				PicoCartLoad(romfile,&RomData,&RomSize);
+#ifdef USE_EXTRA_RAM
+			}
+#endif
 			FAT_fclose(romfile);
 			iprintf("Loaded.\n");
 
@@ -767,24 +1011,12 @@ int EmulateInit() {
 	return 0;
 }
 
-void FindAppendedRom(void) {
+void FindAppendedRom(void)
+{
 	iprintf("Appended ROM check...");
 	
 	sysSetBusOwners(BUS_OWNER_ARM9,BUS_OWNER_ARM9);
 
-	// InitSCMode();
-	// scsd_is_inserted = MemoryCard_IsInserted(); 
-	// scsd_is_inserted = (((*SC_SD_COMMAND & 0x300) == 0) ? true : false);
-	
-	scsd_is_inserted = false;
-	
-	if(scsd_is_inserted) {
-		*SC_UNLOCK = 0xa55a;
-		*SC_UNLOCK = 0xa55a;
-		*SC_UNLOCK = 0x0007;
-		*SC_UNLOCK = 0x0007;
-	}
-	
 	unsigned char *rom=NULL; int size=0;
 	
 	char *rompointer = (char *) GBAROM;
@@ -828,7 +1060,11 @@ void FindAppendedRom(void) {
 			size += 0x200; // add SMD header to size
 		}
 		
-		if(scsd_is_inserted) {
+		// This if check is kind of pointless, how many SC users
+		// are going to use appended ROMs if FAT works?
+		// Might be useful for some other card where we can detect
+		// insertion and use GBAROM but not FAT.
+		if(0) {
 			iprintf("Supercard detected.\n");
 			rom=(unsigned char *)rompointer;
 		}
@@ -849,21 +1085,6 @@ void FindAppendedRom(void) {
 			Byteswap(rom,size);
 		}
 
-		/*
-		if(scsd_is_inserted) {
-			// iprintf("rompointer: %#x\n",rompointer);
-			iprintf("Copying ROM in to Supercard RAM...");
-			memcpy(rompointer,rom,size);
-			free(rom);
-			rom = (unsigned char *)rompointer;
-			RomData = rom;
-			iprintf("Success!\n");	
-		}
-		else {
-			RomData = rom;
-		}
-		*/
-		
 		RomData = rom;
 		RomSize = size;	
 		
@@ -975,8 +1196,9 @@ int main(void)
 
 	FindAppendedRom();
 	if(!UsingAppendedRom) {
-		iprintf("\x1b[2J");
+		iprintf("\nTrying to init FAT...\n");
 		FAT_InitFiles();
+		iprintf("\x1b[2J");
 
 		// Wait two VBlanks as instructed in the FAT docs
 		swiWaitForVBlank();
@@ -1010,6 +1232,9 @@ int main(void)
 	iprintf("Pico.cram: %x\n",offset); 
 	*/
 
+	// u32 *testMem;
+	// int mallCount = 0;
+
 	while(1) {
 		if(choosingfile) {
 			ConvertToGrayscale();
@@ -1021,6 +1246,14 @@ int main(void)
 			}
 			choosingfile = 0;
 		}
+		/*
+		testMem = malloc(128);
+		if(testMem != NULL) {
+			mallCount++;
+		}
+		iprintf("\x1b[17;0HBytes/128: %d              ",mallCount);
+		*/
+
 		EmulateFrame();
 		// Save SRAM
 		if(Pico.m.sram_changed) {
@@ -1030,15 +1263,16 @@ int main(void)
 		}
 		// dmaCopy(BG_GFX,BG_GFX_SUB,512*256*2);
 		// iprintf("\x1b[17;0H                        ");
+
 		// iprintf("\x1b[17;0HFPS: %d   ",FPS);
-		
+
 		/*
 		mi = mallinfo();
 		iprintf("\n%i\t\tarena\n%i\t\tordblks\n%i\t\tuordblks\n%i\t\tfordblks\n",mi.arena,mi.ordblks,mi.uordblks,mi.fordblks);
-		*/
 
 		swiWaitForVBlank();
 		// LastSecond = (IPC->curtime)[7];
+		*/
 	}
 	return 0;
 }

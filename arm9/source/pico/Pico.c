@@ -28,6 +28,10 @@
 #define VIDEO_OPT 0x10
 #endif
 
+#ifdef SW_SCAN_RENDERER
+void PicoFrameFull() {}
+#endif
+
 int PicoVer=0x0080;
 struct Pico Pico;
 // int PicoOpt=0xffffffff; // enable everything
@@ -288,6 +292,15 @@ static int PicoFrameSimple()
 	cycles_z80_line   = (int) ((double) OSC_NTSC / 15 / 60 / 262 + 0.4); // 228
 	z80lines = 38;
   }
+ 
+  /* 
+  cycles_68k_vblank = (int) ((double) OSC_NTSC /  7 / 60 / 262 + 0.4) * 19; // 7790
+  cycles_z80_vblank = (int) ((double) OSC_NTSC / 15 / 60 / 262 + 0.4) * 19;
+  cycles_68k_block  = (int) ((double) OSC_NTSC /  7 / 60 / 262 + 0.4) * 7;
+  cycles_z80_block  = (int) ((double) OSC_NTSC / 15 / 60 / 262 + 0.4) * 7;
+  cycles_z80_line   = (int) ((double) OSC_NTSC / 15 / 60 / 262 + 0.4); // 228
+  z80lines = 38;
+  */
 
   Pico.m.scanline=-100;
 
