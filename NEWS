@@ -1,0 +1,95 @@
+=============================================================================
+PicoDriveDS 0.1.7 - 02/04/2007
+=============================================================================
+- Updated for DKA r20 and latest libnds.
+- Switched to libfat with [DLDI](http://chishm.drunkencoders.com/DLDI/)
+support.
+- Fixed bug where select key must be released quickly in order to go back to
+file selection menu.
+- Appended ROM check now only happens if FAT is unable to init.
+- Added untested Opera RAM expansion support, and RAM support for SCCF.
+
+=============================================================================
+PicoDriveDS 0.1.6 - 11/26/2006
+=============================================================================
+- Added Max Media Dock FAT support (thanks chishm/Bonic)
+- Added EZ4 FAT support (thanks cory1492/Rudolph)
+- Reduced memory usage, 3MB ROMs should work again
+- Added EXPERIMENTAL support for using the additional RAM on SuperCard SD
+carts to load ROMs larger than 3MB. This comes with the standard warning that
+this feature may cause file corruption on your SD card. The SCSD may also
+keep the Genesis ROM in GBA ROM space after a reboot, causing PicoDriveDS to
+see it as an appended ROM and crash on startup - to fix this issue simply
+power down, take the SCSD out, and wait a few seconds.
+
+=============================================================================
+PicoDriveDS 0.1.5 - 08/22/2006
+=============================================================================
+- Added support for appended ROMs. This should allow users with carts not
+supported by gba_nds_fat to use PicoDriveDS. Simply append a ROM to the
+PicoDriveDS binary, and it will run it (on *nix systems this can be done with
+"cat romname.ext >> picodriveds.ext", on Windows with
+"copy /b picodriveds.ext+romname.ext picodriveds-withrom.ext", substituting
+the appropriate filenames of course). You can only append one ROM at a time.
+In this mode, Genesis SRAM will be saved to GBA SRAM. Some patchers may work
+correctly with this and save the SRAM to your removable media, I have only
+been able to test with the EZ4 Lite software.
+- Fixed M3 reset code, added M3SD Mini insertion detection code (untested,
+may not work)
+- Massive code restructure and cleanup (though some cleanup is still in
+progress)
+- Added save state support, accessed via the X button. Due to the current
+size of the save states, this is only supported for FAT devices and is
+disabled in appended ROM mode. Currently there is only one save state per ROM
+(saved to romname.pds). This is still a very experimental feature and save
+states may not be compatible with future versions of PicoDriveDS.
+
+=============================================================================
+PicoDriveDS 0.1.4 - 06/22/2006
+=============================================================================
+- Fixed bug where R could scroll past end of file list
+- Switched to unified builds, now one build should work for all SD/CF carts
+(thanks WinterMute)
+- Added NeoFlash MK2/MK3 support (thanks WinterMute)
+- Changed it so that pressing Select again without choosing a file will
+resume emulation
+
+=============================================================================
+PicoDriveDS 0.1.3 - 06/13/2006
+=============================================================================
+- Added long filename support
+- Added support for going up a directory by pressing B
+- Added support for skipping ahead/back 5 files at a time with R/L
+- Added automatic save/load SRAM support
+
+=============================================================================
+PicoDriveDS 0.1.2 - 06/10/2006
+=============================================================================
+- Switched from Cyclone 0.0080 to Reesy's Cyclone 0.0084
+- Switched from software scaling to hardware scaling
+- Added three scale modes: Stretch, Aspect, and 1:1
+- Cycle through scale modes with L
+- Position the window in 1:1 mode by holding R and using the D-Pad
+- Added soft reset (press select, takes you back to the ROM list)
+- Added NDS banner information (shows up in WMB)
+
+=============================================================================
+PicoDriveDS 0.1.1 - 06/07/2006
+=============================================================================
+- Rewrote frameskip code
+- IRQ/VBlank code redone to fix bug
+
+=============================================================================
+PicoDriveDS 0.1.0 - 06/07/2006
+=============================================================================
+Ported this over the weekend, I think it's in a state now where some people
+will be able to use it. Initial reports are that it has issues running on
+CF-based carts, I only have a SuperCard SD to test with so I haven't been
+able to debug it on CF to see what's going on.
+
+Copy it to your media, then copy over the Genesis ROMs you want to play
+(it should be able to play ROMs with .BIN, .GEN, and .SMD extensions).
+There's no sound, but since it uses the Cyclone 68k core which is optimized
+for ARM it runs well for the most part. Scaling is done in-software right
+now so the downscale isn't as fast or good as it could be. There's no double
+buffering yet so you might see tearing on some games. Y/B/A are A/B/C.

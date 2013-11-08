@@ -1,0 +1,72 @@
+=============================================================================
+PicoDriveDS - A Sega Genesis/Mega Drive Emulator for the Nintendo DS
+=============================================================================
+Authors: FinalBurn, notaz, reesy, ported by Ryan FB
+E-Mail: ryanfb@gmail.com
+Homepage: http://cryptosystem.org/ and http://picodriveds.bountysource.com/
+
+=============================================================================
+RUNNING
+=============================================================================
+Copy picodriveds.nds or picodriveds.ds.gba to your flash cart (SuperCard
+users may need to use picodriveds.ds.gba renamed to picodriveds.sc.nds), and
+run as usual. If you are using a FAT-based cart, copy over the ROMs you wish
+to run with a .bin, .gen, or .smd extension.
+
+For FAT-based cartridges, PicoDriveDS uses libfat with DLDI support. This
+means if your cart is not supported by libfat (for example, you get a
+"FAT init failed" message), you must patch the PicoDriveDS .nds or .ds.gba
+with the appropriate DLDI driver. Drivers and instructions are available at:
+http://chishm.drunkencoders.com/DLDI/
+Please contact your flash cart manufacturer if FAT is not supported for your
+device. As PicoDriveDS no longer uses its own FAT libraries, and cannot keep
+up with every single flash cart released, the author has no interest in
+troubleshooting or debugging issues unique to a particular cart.
+
+For traditional Slot-2 GBA flash cartridges, PicoDriveDS supports loading an
+appended ROM from GBA ROM space. In this mode, Genesis SRAM will be saved to
+GBA SRAM, overwriting anything already there. Save states are not currently
+supported for this mode. To append a ROM named romname.ext to the
+PicoDriveDS executable, use the appropriate command for your platform:
+*nix: 
+	cat picodriveds.ext romname.ext > picodriveds-withrom.ext
+Windows:
+	copy /b picodriveds.ext+romname.ext picodriveds-withrom.ext
+
+Currently, ROMs larger than 3MB can only be loaded if you have a SuperCard SD
+or CF, or place an Opera RAM expansion cart in Slot-2.
+
+=============================================================================
+CONTROLS
+=============================================================================
+File selection:
+Up/Down: Previous/Next file
+L: Scroll 5 files up
+R: Scroll 5 files down
+B: Go up one directory
+A: Open file/directory
+Select: Resume emulation
+
+Emulation:
+D-pad: Genesis D-pad
+Y: Genesis A button
+B: Genesis B button
+A: Genesis C button
+Start: Genesis Start button
+Select: Pause emulation and go to file selection menu
+X: Pause emulation and show save state menu (press B to exit save state menu)
+L: Switch scaling mode between fill, aspect, and 1:1 scaling
+R: In 1:1 scaling, hold down R and use the D-pad to scroll the display
+
+=============================================================================
+LICENSE
+=============================================================================
+PicoDriveDS retains the license it has inherited from the original PicoDrive
+project:
+
+Free for non-commercial use.
+For commercial use, separate licencing terms must be obtained.
+
+Please contact the original PicoDrive authors first if you wish to obtain
+commercial licensing terms, as the large majority of copyright is held by
+them.
